@@ -12,6 +12,19 @@
     Optional Dependencies: None (No dependencies, no special permissions)
 
     License: BSD 3-Clause
+
+.EXAMPLE
+& .\Search-StringInAD.ps1 -SearchTerm password
+Searches the entire AD / all objects for any object with any attribute containing the word "password".
+
+& .\Search-StringInAD.ps1 -SearchTerm helpdesk -ShowMatchDetails -OutputToGrid
+Searches the entire AD / all objects for any object with any attribute containing the word "helpdesk", including the exact Match Details from the object, Plus opens an ad-hoc GRID with the results.
+
+& .\Search-StringInAD.ps1 -OutputToGrid -SearchForIPAddresses -SearchForHiddenUnicodeCharacters
+Searches the entire AD / all objects for any IP Address pattern match (REGEX), as well as ANY unicode character (hidden in ASCII), Plus opens an ad-hoc GRID with the results.
+
+& .\Search-StringInAD.ps1 -SearchTerm admin -SearchForIPAddresses -OutputFile c:\temp\SearchAD.txt
+Searches the entire AD / all objects for any object with any attribute containing the word "admin", plus gets IP Address pattern match (REGEX), and saves the results to c:\temp\SearchAD.txt.
 #>
 
 param (
