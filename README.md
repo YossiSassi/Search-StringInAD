@@ -1,7 +1,11 @@
 # Search-StringInAD
 Looks recursively for 'interesting' strings (as well as IP addresses &amp; hidden Unicode characters) in all AD objects<br><br>
 Required Dependencies: *None*  (excpet for LDAP connectivity to a Domain Controller, as any authenticated user)<br>
-Optional Dependencies: *None*  (No module dependencies, no special permissions)<br><br>
+Optional Dependencies: *None*  (No module dependencies, no special permissions)<br>
+
+<br><b>NOTE:</b><br>
+The Unicode character 0x00A0 <Type: No-Break Space (NBSP)> is often common in several AD attributes, and can be considered as a benign finding in most cases.<br><br>
+
 <b>Example usage:</b><br>
 & .\Search-StringInAD.ps1 -SearchTerm password<br>
 *Searches the entire AD / all objects for any object with any attribute containing the word "password"*<br><br>
