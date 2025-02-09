@@ -2,9 +2,10 @@
 .SYNOPSIS
     Looks recursively for 'interesting' strings (as well as IP addresses & Unicode characters that are hidden in ASCII) in all AD objects.
 
-.NOTES
     Author: 1nTh35h311 (yossis@protonmail.com, @Yossi_Sassi)
-    Version: 1.1
+
+    Version: 1.2
+    v1.2 - Fixed minor logical bug in arguments
     v1.1 - Added an optional lookup for (hidden) Unicode characters in AD Objects
     v1.0.0 - initial script
 
@@ -17,15 +18,12 @@
 & .\Search-StringInAD.ps1 -SearchTerm password
 Searches the entire AD / all objects for any object with any attribute containing the word "password".
 
-.EXAMPLE
 & .\Search-StringInAD.ps1 -SearchTerm helpdesk -ShowMatchDetails -OutputToGrid
 Searches the entire AD / all objects for any object with any attribute containing the word "helpdesk", including the exact Match Details from the object, Plus opens an ad-hoc GRID with the results.
 
-.EXAMPLE
 & .\Search-StringInAD.ps1 -OutputToGrid -SearchForIPAddresses -SearchForHiddenUnicodeCharacters
 Searches the entire AD / all objects for any IP Address pattern match (REGEX), as well as ANY unicode character (hidden in ASCII), Plus opens an ad-hoc GRID with the results.
 
-.EXAMPLE
 & .\Search-StringInAD.ps1 -SearchTerm admin -SearchForIPAddresses -OutputFile c:\temp\SearchAD.txt
 Searches the entire AD / all objects for any object with any attribute containing the word "admin", plus gets IP Address pattern match (REGEX), and saves the results to c:\temp\SearchAD.txt.
 #>
@@ -66,8 +64,7 @@ else
             }
     else   
         {
-            Write-Host "Missing SearchTerm parameter." -ForegroundColor Yellow;
-            break
+            Write-Host "No SearchTerm parameter provided." -ForegroundColor Yellow;
         }
 }
 
@@ -81,6 +78,13 @@ if ($OutputToGrid)
         $GridData = @();
         $GridData += "SamAccountName;Name;DistinguishedName;Attribute;Value (Match Details)"
     }
+
+# make sure any parameter was provided. if not, exit
+if (!$SearchForIPAddresses -and !$SearchForHiddenUnicodeCharacters -and $SearchTerm -eq [string]::empty)
+        {
+            Write-Host "No other parameters provided." -ForegroundColor Yellow;
+	    break
+        }
 
 # hash table of unicode characters + types
 $UnicodeCharTable = @{
@@ -151,7 +155,7 @@ $DS.FindAll() | Foreach-Object {
                                         }
                         }
                     # match by search term only
-                    elseif ($obj.Properties.$CurrentProp -like "*$SearchTerm*") {
+                    elseif ($SearchTerm -and $obj.Properties.$CurrentProp -like "*$SearchTerm*") {
                             $ResultMatch = $true;
                         }
 
