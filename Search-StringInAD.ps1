@@ -4,7 +4,8 @@
 
     Author: 1nTh35h311 (yossis@protonmail.com, @Yossi_Sassi)
 
-    Version: 1.2
+    Version: 1.3
+    v1.3 - Fixed issue with Match details not being written to log file
     v1.2 - Fixed minor logical bug in arguments
     v1.1 - Added an optional lookup for (hidden) Unicode characters in AD Objects
     v1.0.0 - initial script
@@ -172,10 +173,10 @@ $DS.FindAll() | Foreach-Object {
 
                     if ($ResultMatch)
                         {
-                            if ($ShowMatchDetails -and $UnicodeResult -eq $false)
+                            if ($ShowMatchDetails -and $UnicodeResult -eq $null)
                                 {
                                     Write-Host "Found match on attribute <$($CurrentProp)> of object:`n$($obj.properties.samaccountname); $($obj.properties.distinguishedname)`nMatch Details: $($obj.properties.$CurrentProp)" -ForegroundColor $(Switch-Color);
-				                    "Found match on attribute <$($CurrentProp)> of object:`n$($obj.properties.samaccountname); $($obj.properties.distinguishedname)`nMatch Details: $($obj.properties.$CurrentProp)`n" | out-file $OutputFile -append -force;
+				                    "Found match on attribute <$($CurrentProp)> of object:`n$($obj.properties.samaccountname); $($obj.properties.distinguishedname); `nMatch Details: $($obj.properties.$CurrentProp)`n" | out-file $OutputFile -append -force;
                                 }
                             else
                                 {
@@ -204,7 +205,8 @@ if ($OutputToGrid)
 
 if ([io.file]::ReadAllLines($OutputFile).count -eq 1)
     {
-        Write-Host "No matches found." -ForegroundColor Yellow
+        Write-Host "No matches found." -ForegroundColor Yellow;
+        Remove-Item $OutputFile -Force
     }
 else
     {
