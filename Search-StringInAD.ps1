@@ -4,7 +4,8 @@
 
     Author: 1nTh35h311 (yossis@protonmail.com, @Yossi_Sassi)
 
-    Version: 1.3
+    Version: 1.3.1
+    v1.3.1 - Fixed common parameters + display correction showing 'Name' attribute instead of 'SamAccountName' (since non-principals don't have samaccountname, e.g. objects that are not a user|computer|group)
     v1.3 - Fixed issue with Match details not being written to log file
     v1.2 - Fixed minor logical bug in arguments
     v1.1 - Added an optional lookup for (hidden) Unicode characters in AD Objects
@@ -29,8 +30,8 @@ Searches the entire AD / all objects for any IP Address pattern match (REGEX), a
 Searches the entire AD / all objects for any object with any attribute containing the word "admin", plus gets IP Address pattern match (REGEX), and saves the results to c:\temp\SearchAD.txt.
 #>
 
+[cmdletbinding()]
 param (
-    [cmdletbinding()]
     [string]$SearchTerm,
     [switch]$ShowMatchDetails,
     [Switch]$OutputToGrid,
@@ -65,7 +66,7 @@ else
             }
     else   
         {
-            Write-Host "No SearchTerm parameter provided." -ForegroundColor Yellow;
+            Write-Host "SearchTerm parameter not provided." -ForegroundColor Yellow;
         }
 }
 
@@ -123,7 +124,7 @@ $UnicodeCharTable = @{
     "0xFFFB" = "Interlinear Annotation Terminator"
 }
 
-# Get AD Objects
+# Get all Objects in the AD domain
 $DS = new-object system.directoryservices.directorysearcher;
 $DS.Filter = '(WhenCreated=*)';
 $DS.SizeLimit = 100000;
@@ -164,8 +165,8 @@ $DS.FindAll() | Foreach-Object {
                     if ($SearchForHiddenUnicodeCharacters) {
                             $UnicodeResult = ($obj.Properties.$CurrentProp | Out-String).ToCharArray() | ForEach-Object {$Key = $('0x{0:X4}' -f [int][char]$_); if ($UnicodeCharTable.Keys -contains $Key) {"Unicode character:$key,Type:$($UnicodeCharTable[$key])"} }     
                             if ($UnicodeResult) {
-                                Write-Host "Found HIDDEN UNICODE CHARACTER on attribute <$($CurrentProp)> of object:`n$($obj.properties.samaccountname); $($obj.properties.distinguishedname)`nMatch Details: $UnicodeResult" -ForegroundColor $(Switch-Color);
-				                "Found HIDDEN UNICODE CHARACTER on attribute <$($CurrentProp)> of object:`n$($obj.properties.samaccountname); $($obj.properties.distinguishedname)`nMatch Details: $UnicodeResult`n" | out-file $OutputFile -append -force;
+                                Write-Host "Found HIDDEN UNICODE CHARACTER on attribute <$($CurrentProp)> of object:`n$($obj.properties.name); $($obj.properties.distinguishedname)`nMatch Details: $UnicodeResult" -ForegroundColor $(Switch-Color);
+				                "Found HIDDEN UNICODE CHARACTER on attribute <$($CurrentProp)> of object:`n$($obj.properties.name); $($obj.properties.distinguishedname)`nMatch Details: $UnicodeResult`n" | out-file $OutputFile -append -force;
                                 $UnicodeResultMatch = $true;
                                 $ResultMatch = $true
                             }
@@ -175,19 +176,29 @@ $DS.FindAll() | Foreach-Object {
                         {
                             if ($ShowMatchDetails -and $UnicodeResult -eq $null)
                                 {
-                                    Write-Host "Found match on attribute <$($CurrentProp)> of object:`n$($obj.properties.samaccountname); $($obj.properties.distinguishedname)`nMatch Details: $($obj.properties.$CurrentProp)" -ForegroundColor $(Switch-Color);
-				                    "Found match on attribute <$($CurrentProp)> of object:`n$($obj.properties.samaccountname); $($obj.properties.distinguishedname); `nMatch Details: $($obj.properties.$CurrentProp)`n" | out-file $OutputFile -append -force;
+                                    Write-Host "Found match on attribute <$($CurrentProp)> of object:`n$($obj.properties.name); $($obj.properties.distinguishedname)`nMatch Details: $($obj.properties.$CurrentProp)" -ForegroundColor $(Switch-Color);
+				                    "Found match on attribute <$($CurrentProp)> of object:`n$($obj.properties.name); $($obj.properties.distinguishedname); `nMatch Details: $($obj.properties.$CurrentProp)`n" | out-file $OutputFile -append -force;
                                 }
                             else
                                 {
-                                    Write-Host "Found match on attribute <$($CurrentProp)> of object:`n$($obj.properties.samaccountname); $($obj.properties.distinguishedname)" -ForegroundColor $(Switch-Color);
-				                    "Found match on attribute <$($CurrentProp)> of object:`n$($obj.properties.samaccountname); $($obj.properties.distinguishedname)`n" | out-file $OutputFile -append -force;
+                                    Write-Host "Found match on attribute <$($CurrentProp)> of object:`n$($obj.properties.name); $($obj.properties.distinguishedname)" -ForegroundColor $(Switch-Color);
+				                    "Found match on attribute <$($CurrentProp)> of object:`n$($obj.properties.name); $($obj.properties.distinguishedname)`n" | out-file $OutputFile -append -force;
                                 }
 
                             if ($OutputToGrid)
                                 {
-                                    if ($UnicodeResultMatch) {$GridData += "$($obj.properties.samaccountname);$($obj.properties.name);$($obj.properties.distinguishedname);$CurrentProp;$UnicodeResult"}
-                                    $GridData += "$($obj.properties.samaccountname);$($obj.properties.name);$($obj.properties.distinguishedname);$CurrentProp;$($obj.properties.$CurrentProp)"
+                                    if (@("computer","group","person") -contains $obj.Properties.objectcategory.split(",")[0].replace("CN=","") ) 
+                                        {
+                                            $samaccountnameDisplay = $($obj.properties.samaccountname)
+                                        } 
+                                    else 
+                                        {
+                                            $samaccountnameDisplay = "N/A"
+                                        }
+                                    
+                                    if ($UnicodeResultMatch) {$GridData += "$samaccountnameDisplay;$($obj.properties.name);$($obj.properties.distinguishedname);$CurrentProp;$UnicodeResult"}
+                                    $GridData += "$samaccountnameDisplay;$($obj.properties.name);$($obj.properties.distinguishedname);$CurrentProp;$($obj.properties.$CurrentProp)";
+                                    Clear-Variable samaccountnameDisplay -ErrorAction SilentlyContinue
                                 }
                             
                             # reset result match for the next loop
